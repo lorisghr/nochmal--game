@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#35322e">
+<meta name="apple-mobile-web-app-title" content="Noch mal!">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>Noch mal!</title>
+<style>
+:root{
+  --paper:#35322e; --paper-hi:#413d38; --ink:#f6f2e8; --ink-dim:#a49c8f;
+  --line:#5a544c; --good:#8fbf5a;
+  --G:#a9c74f; --Y:#f3c24c; --B:#7cc4e8; --R:#e8617c; --O:#f09a5b;
+  --gap:2px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:#26241f;color:var(--ink);
+  font-family:ui-rounded,"SF Pro Rounded","Avenir Next",system-ui,sans-serif;
+  font-size:17px;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+body{padding:env(safe-area-inset-top) 10px calc(env(safe-area-inset-bottom) + 14px)}
+.wrap{max-width:560px;margin:0 auto}
+h1{font-size:32px;font-weight:800;letter-spacing:-.02em;margin:16px 0 2px}
+h1 em{font-style:normal;color:var(--R)}
+p.lede{color:var(--ink-dim);margin:0 0 18px;line-height:1.45}
+.card{background:var(--paper);border-radius:16px;padding:14px;margin-bottom:10px}
+button{font:inherit;font-weight:700;border:none;border-radius:12px;padding:14px 16px;
+  background:var(--paper-hi);color:var(--ink);cursor:pointer}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.3}
+button.primary{background:var(--ink);color:#26241f}
+button.go{background:var(--good);color:#1d2412}
+button.quiet{background:transparent;color:var(--ink-dim);padding:10px}
+button:focus-visible{outline:2px solid var(--Y);outline-offset:2px}
+.row{display:flex;gap:8px;align-items:center}
+.grow{flex:1}
+input[type=text]{font:inherit;background:var(--paper-hi);border:1px solid var(--line);
+  color:var(--ink);border-radius:12px;padding:12px;width:100%}
+label.small{font-size:14px;color:var(--ink-dim);display:block;margin-bottom:6px}
+.tabs{display:flex;gap:6px}
+.tabs button{flex:1;padding:12px 6px;font-size:16px}
+.tabs button.on{background:var(--ink);color:#26241f}
+
+/* Spielblatt */
+.sheet{background:var(--paper);border-radius:16px;padding:8px;margin-bottom:10px}
+.letters,.vals{display:grid;grid-template-columns:repeat(15,1fr);gap:var(--gap)}
+.letters div{text-align:center;font-size:11px;font-weight:800;color:#26241f;
+  background:var(--ink);border-radius:4px;padding:2px 0}
+.letters div.h{color:var(--R)}
+.grid{display:grid;grid-template-columns:repeat(15,1fr);gap:var(--gap);margin:var(--gap) 0}
+.cell{aspect-ratio:1;border-radius:4px;position:relative;display:flex;
+  align-items:center;justify-content:center}
+.cell.G{background:var(--G)} .cell.Y{background:var(--Y)} .cell.B{background:var(--B)}
+.cell.R{background:var(--R)} .cell.O{background:var(--O)}
+.cell .star{position:absolute;font-size:9px;color:#fff9;pointer-events:none}
+.cell.crossed::after{content:"";position:absolute;inset:12%;
+  background:
+    linear-gradient(45deg,transparent 43%,#2b2823 43%,#2b2823 57%,transparent 57%),
+    linear-gradient(-45deg,transparent 43%,#2b2823 43%,#2b2823 57%,transparent 57%)}
+.cell.sel{box-shadow:inset 0 0 0 2px #26241f, 0 0 0 3px var(--ink);z-index:2}
+.cell.sel::after{content:"";position:absolute;inset:14%;opacity:.5;
+  background:
+    linear-gradient(45deg,transparent 43%,#2b2823 43%,#2b2823 57%,transparent 57%),
+    linear-gradient(-45deg,transparent 43%,#2b2823 43%,#2b2823 57%,transparent 57%)}
+.cell.off{opacity:.2}
+.cell.can::before{content:"";position:absolute;width:30%;height:30%;border-radius:50%;
+  background:#26241f59}
+.vals div{text-align:center;font-size:10px;font-weight:700;border-radius:4px;
+  padding:1px 0;background:var(--ink);color:#26241f}
+.vals.bot div{background:#cdc7b8}
+.vals div.gone{opacity:.28;text-decoration:line-through}
+.vals div.won{background:var(--Y);box-shadow:0 0 0 2px var(--ink)}
+
+/* Joker-Leiste */
+.jokers{display:flex;align-items:center;gap:4px;background:var(--ink);
+  border-radius:8px;padding:4px 5px;margin-top:var(--gap)}
+.jlab{font-size:11px;font-weight:800;color:#26241f;background:#cdc7b8;
+  border-radius:4px;padding:2px 5px;white-space:nowrap}
+.jok{flex:1;text-align:center;font-size:13px;font-weight:800;color:#26241f;
+  border:1.5px solid #26241f;border-radius:999px;position:relative;line-height:1.35}
+.jok.used{opacity:.32}
+.jok.used::after{content:"";position:absolute;left:14%;right:14%;top:47%;
+  height:2px;background:#26241f;border-radius:2px}
+
+/* Bonus + Punkte */
+.bonusgrid{display:flex;gap:5px;margin-top:8px}
+.bpair{flex:1;display:flex;gap:3px}
+.bbox{flex:1;text-align:center;font-size:12px;font-weight:800;color:#fff;
+  border-radius:5px;padding:3px 0}
+.bbox.circ{color:#26241f;box-shadow:0 0 0 2px var(--ink)}
+.bbox.gone{opacity:.28;text-decoration:line-through}
+.sum{margin-top:9px;display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:14px}
+.sum .lbl{color:var(--ink-dim)}
+.sum .num{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.sum .rule{grid-column:1/-1;border-top:1px dashed var(--line);margin-top:3px}
+.sum .big{font-size:17px;font-weight:800}
+
+/* Würfel */
+.dice{display:flex;gap:8px;justify-content:center}
+.die{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;
+  justify-content:center;font-size:24px;font-weight:800;color:#26241f;
+  border:3px solid transparent}
+.die.n{background:var(--ink)}
+.die.J{background:#26241f;color:var(--ink);box-shadow:inset 0 0 0 3px var(--ink)}
+.die.pick{border-color:var(--ink);transform:translateY(-4px)}
+.die.gone{opacity:.18;pointer-events:none}
+.die.empty{background:var(--paper-hi);border:2px dashed var(--line);color:var(--ink-dim);font-size:20px}
+.die.G{background:var(--G)} .die.Y{background:var(--Y)} .die.B{background:var(--B)}
+.die.R{background:var(--R)} .die.O{background:var(--O)}
+@keyframes shake{
+  0%{transform:translateY(0) rotate(-9deg)}
+  25%{transform:translateY(-7px) rotate(5deg)}
+  50%{transform:translateY(0) rotate(9deg)}
+  75%{transform:translateY(-5px) rotate(-5deg)}
+  100%{transform:translateY(0) rotate(-9deg)}}
+@keyframes land{0%{transform:scale(1.22)}60%{transform:scale(.94)}100%{transform:scale(1)}}
+.die.shake{animation:shake .22s linear infinite}
+.die.land{animation:land .3s ease-out}
+.cup{padding:22px 14px;text-align:center;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.die.shake,.die.land{animation:none}}
+.dicerow{display:flex;flex-direction:column;gap:10px;align-items:center}
+.small-die{width:40px;height:40px;font-size:18px;border-radius:11px}
+
+.overlay{position:fixed;inset:0;background:#12110ecc;display:flex;align-items:center;
+  justify-content:center;padding:18px;z-index:50}
+.overlay .box{background:var(--paper);border-radius:18px;padding:20px;max-width:380px;width:100%}
+.overlay p{margin:0 0 16px;font-size:18px;font-weight:700;line-height:1.35;text-align:center}
+.step{font-size:17px;font-weight:700;text-align:center;margin:12px 0 10px;line-height:1.35}
+.step .muted{display:block;font-size:14px;font-weight:500;color:var(--ink-dim);margin-top:3px}
+.err{color:#ffb3b3;text-align:center;font-size:15px;min-height:22px;margin:6px 0 0}
+.who{font-size:26px;font-weight:800;text-align:center;margin:6px 0 2px}
+.mini{font-size:14px;color:var(--ink-dim);text-align:center}
+table{width:100%;border-collapse:collapse;font-size:15px}
+td,th{padding:7px 4px;text-align:right;border-bottom:1px solid var(--line)}
+th:first-child,td:first-child{text-align:left}
+ul.probs{margin:8px 0 0;padding-left:18px;line-height:1.6;color:var(--ink-dim)}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<script>
+"use strict";
+/* ==========================================================
+   1. SPIELBLATT
+   ========================================================== */
+const ROWS = 7, COLS = 15, START_COL = 7;
+const COL_TOP = [5,3,3,3,2,2,2,1,2,2,2,3,3,3,5];
+const COL_BOT = [3,2,2,2,1,1,1,0,1,1,1,2,2,2,3];
+const CLIST = ["G","Y","B","R","O"];
+const CNAME = {G:"Grün",Y:"Gelb",B:"Blau",R:"Rot",O:"Orange"};
+const MAX_JOKER = 8, N_STARS = 15;
+
+/* Das echte Blatt, von Loris gegengeprüft. */
+const ORIGINAL = {
+  grid: [
+    "GGGYYYYGBBBOYYY",
+    "OGYGYYOORBBOOGG",
+    "BGRGGGGRRRYYOGG",
+    "BRRGOOBBGGYYORB",
+    "ROOOORBBOOORRRR",
+    "RBBRRRRYYORBBBO",
+    "YYBBBBRYYYGGGOO"
+  ].map(s => s.split("")),
+  stars: ["0,7","0,11","1,2","1,4","1,9","2,0","2,6","3,5","3,13",
+          "5,1","5,3","5,8","5,10","5,14","6,12"]
+};
+
+const clone = o => JSON.parse(JSON.stringify(o));
+function loadBoard(){
+  try{ const r = localStorage.getItem("nochmal.board2"); if(r) return JSON.parse(r); }catch(e){}
+  return clone(ORIGINAL);
+}
+function saveBoard(b){ try{ localStorage.setItem("nochmal.board2", JSON.stringify(b)); }catch(e){} }
+let BOARD = loadBoard();
+
+const key = (r,c) => r+","+c;
+const isStar = (r,c) => BOARD.stars.includes(key(r,c));
+const nb = (r,c) => [[r-1,c],[r+1,c],[r,c-1],[r,c+1]]
+  .filter(([y,x]) => y>=0 && y<ROWS && x>=0 && x<COLS);
+
+function checkBoard(b){
+  const probs = [];
+  for(let c=0;c<COLS;c++){
+    const have = new Set();
+    for(let r=0;r<ROWS;r++) have.add(b.grid[r][c]);
+    const miss = CLIST.filter(x => !have.has(x));
+    if(miss.length) probs.push("Spalte "+String.fromCharCode(65+c)+": "+
+      miss.map(m=>CNAME[m]).join(", ")+" fehlt");
+  }
+  const cnt = {}; CLIST.forEach(x=>cnt[x]=0);
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) cnt[b.grid[r][c]]++;
+  CLIST.forEach(x=>{ if(cnt[x]!==21) probs.push(CNAME[x]+": "+cnt[x]+" Felder statt 21"); });
+  return probs;
+}
+
+/* Blöcke = zusammenhängende Felder gleicher Farbe */
+function blockStats(grid){
+  const seen = Array.from({length:ROWS},()=>Array(COLS).fill(false));
+  const sizes = [];
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(seen[r][c]) continue;
+    const col = grid[r][c], q = [[r,c]]; seen[r][c] = true; let n = 0;
+    while(q.length){
+      const [y,x] = q.pop(); n++;
+      for(const [a,b] of nb(y,x))
+        if(!seen[a][b] && grid[a][b] === col){ seen[a][b] = true; q.push([a,b]); }
+    }
+    sizes.push(n);
+  }
+  return { max: Math.max(...sizes), singles: sizes.filter(s=>s===1).length,
+           big: sizes.filter(s=>s>=3).length, count: sizes.length };
+}
+
+/* Zufälliges, garantiert regelkonformes Blatt.
+   Trick: Wir tauschen nur zwei Felder INNERHALB einer Spalte. Dadurch bleiben
+   sowohl "jede Spalte enthält alle fünf Farben" als auch "21 Felder je Farbe"
+   automatisch erhalten. Angenommen wird ein Tausch nur, wenn die Blockformen
+   spielbar bleiben. */
+const ri = n => Math.floor(Math.random()*n);
+/* Formkriterien, abgelesen am echten Blatt: grösster Block 6, 5 Einzelfelder,
+   20 Blöcke mit 3+ Feldern, 30 Blöcke insgesamt. Ein Zufallsblatt darf davon
+   nur mässig abweichen, sonst wird es entweder Konfetti oder ein Klumpen. */
+function shapeOK(g){
+  const s = blockStats(g);
+  return s.max <= 6 && s.singles <= 12 && s.big >= 16 && s.count >= 25 && s.count <= 36;
+}
+function randomBoard(){
+  const g = ORIGINAL.grid.map(r => r.slice());
+  let acc = 0, tries = 0;
+  while(acc < 400 && tries < 20000){
+    tries++;
+    const c = ri(COLS), r1 = ri(ROWS), r2 = ri(ROWS);
+    if(r1 === r2 || g[r1][c] === g[r2][c]) continue;
+    const a = g[r1][c], b = g[r2][c];
+    g[r1][c] = b; g[r2][c] = a;
+    if(shapeOK(g)) acc++; else { g[r1][c] = a; g[r2][c] = b; }
+  }
+  const stars = new Set();
+  while(stars.size < N_STARS) stars.add(key(ri(ROWS), ri(COLS)));
+  return { grid: g, stars: [...stars] };
+}
+
+/* ==========================================================
+   2. REGEL-ENGINE
+   ========================================================== */
+function newPlayer(name, isBot){
+  return { name, isBot:!!isBot, crossed:new Set(), jokersUsed:0,
+           cols:{}, bonus:{}, colsLostTop:new Set(), bonusLostTop:new Set() };
+}
+function isAnchor(p, r, c){
+  if(c === START_COL) return true;
+  return nb(r,c).some(([y,x]) => p.crossed.has(key(y,x)));
+}
+function validate(p, color, count, cells){
+  if(cells.length !== count)
+    return "Genau "+count+" Kästchen ankreuzen – es sind "+cells.length+".";
+  for(const k of cells){
+    const [r,c] = k.split(",").map(Number);
+    if(BOARD.grid[r][c] !== color) return "Alle Kästchen müssen "+CNAME[color]+" sein.";
+    if(p.crossed.has(k)) return "Ein Kästchen ist schon angekreuzt.";
+  }
+  const set = new Set(cells), seen = new Set([cells[0]]), q = [cells[0]];
+  while(q.length){
+    const [r,c] = q.pop().split(",").map(Number);
+    for(const [y,x] of nb(r,c)){
+      const k2 = key(y,x);
+      if(set.has(k2) && !seen.has(k2)){ seen.add(k2); q.push(k2); }
+    }
+  }
+  if(seen.size !== cells.length)
+    return "Die Kästchen müssen zusammenhängen – schräg zählt nicht.";
+  if(!cells.some(k => { const [r,c] = k.split(",").map(Number); return isAnchor(p,r,c); }))
+    return "Der Block muss an ein Kreuz grenzen oder in Spalte H liegen.";
+  return null;
+}
+function enumerate(p, color, count, cap){
+  cap = cap || 250;
+  const out = [], seen = new Set();
+  const free = (r,c) => r>=0&&r<ROWS&&c>=0&&c<COLS &&
+                        BOARD.grid[r][c]===color && !p.crossed.has(key(r,c));
+  const seeds = [];
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++)
+    if(free(r,c) && isAnchor(p,r,c)) seeds.push([r,c]);
+  function grow(cur){
+    if(out.length >= cap) return;
+    if(cur.length === count){
+      const k = [...cur].sort().join("|");
+      if(!seen.has(k)){ seen.add(k); out.push([...cur]); }
+      return;
+    }
+    const cand = new Set();
+    for(const k of cur){
+      const [r,c] = k.split(",").map(Number);
+      for(const [y,x] of nb(r,c)) if(free(y,x) && !cur.includes(key(y,x))) cand.add(key(y,x));
+    }
+    for(const k of cand) grow(cur.concat([k]));
+  }
+  for(const [r,c] of seeds){ grow([key(r,c)]); if(out.length >= cap) break; }
+  return out;
+}
+/* Alle Felder, die in irgendeinem erlaubten Zug vorkommen (für die Hilfe-Anzeige) */
+function playableCells(p, color, count){
+  const s = new Set();
+  for(const move of enumerate(p, color, count, 250)) move.forEach(k => s.add(k));
+  return s;
+}
+const colComplete = (p,c) => { for(let r=0;r<ROWS;r++) if(!p.crossed.has(key(r,c))) return false; return true; };
+const colorComplete = (p,col) => {
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++)
+    if(BOARD.grid[r][c]===col && !p.crossed.has(key(r,c))) return false;
+  return true;
+};
+function score(p){
+  let cols = 0; for(const c in p.cols) cols += p.cols[c];
+  let bon = 0; for(const b in p.bonus) bon += p.bonus[b];
+  const jok = MAX_JOKER - p.jokersUsed;
+  let st = 0; for(const s of BOARD.stars) if(!p.crossed.has(s)) st++;
+  return { cols, bon, jok, stars:-2*st, total: cols+bon+jok-2*st };
+}
+
+/* ==========================================================
+   3. SPIELABLAUF
+   ========================================================== */
+const COLOR_FACES = ["G","Y","B","R","O","J"];
+const NUM_FACES = [1,2,3,4,5,"?"];
+const rand = a => a[ri(a.length)];
+let S = null;
+
+function startGame(cfg){
+  // Eigener Zettel und Allein sind Ein-Spieler-Modi, egal wie viele Namen ankommen
+  const names = (cfg.mode==="sheet" || cfg.mode==="solo") ? cfg.names.slice(0,1) : cfg.names;
+  const players = names.map((n,i) => newPlayer(n, cfg.mode==="bot" && i>0));
+  S = {
+    mode: cfg.mode, diceMode: cfg.mode==="sheet" ? "sheet" : cfg.diceMode, players,
+    nDice: cfg.mode==="solo" ? cfg.soloDice/2 : 3,
+    maxRounds: cfg.mode==="solo" ? 30 : Infinity,
+    round: 1, activeIdx: 0, dice:null, removed:[], queue:[], qi:0,
+    entry:null, sel:null, colTopTaken:Array(COLS).fill(false), bonusTopTaken:{},
+    log:[], over:false, phase:"entry"
+  };
+  clearSel(); beginRound();
+}
+function clearSel(){ S.sel = { c:null, n:null, jc:null, jn:null, cells:[] }; }
+
+function beginRound(){
+  clearSel(); errMsg = "";
+  S.removed = [];
+  S.queue = S.players.map((_,i) => (S.activeIdx + i) % S.players.length);
+  S.qi = 0;
+  if(S.diceMode === "sheet"){
+    S.dice = null; toTurn();
+  } else if(S.diceMode === "manual"){
+    S.entry = { c:Array(S.nDice).fill(null), n:Array(S.nDice).fill(null), slot:{t:"c",i:0} };
+    S.phase = "entry"; render();
+  } else {
+    S.dice = null; S.rolling = false; S.settled = null;
+    S.phase = "roll"; render();
+    if(S.players[S.activeIdx].isBot) setTimeout(doRoll, 700);
+  }
+}
+
+/* Digitale Würfel: antippen, sie rollen und bleiben nacheinander liegen. */
+function doRoll(){
+  if(S.rolling || S.dice) return;
+  const N = S.nDice;
+  const final = { c:Array.from({length:N}, () => rand(COLOR_FACES)),
+                  n:Array.from({length:N}, () => rand(NUM_FACES)) };
+  S.rolling = true;
+  S.dice = { c:final.c.slice(), n:final.n.slice() };
+  S.settled = { c:Array(N).fill(false), n:Array(N).fill(false) };
+
+  const still = window.matchMedia &&
+                window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(still){ S.rolling = false; S.settled = null; toTurn(); return; }
+
+  const order = [];
+  for(let i=0;i<N;i++){ order.push({t:"c",i}); order.push({t:"n",i}); }
+  let step = 0;
+  const iv = setInterval(() => {
+    step++;
+    for(let i=0;i<N;i++){
+      if(!S.settled.c[i]) S.dice.c[i] = rand(COLOR_FACES);
+      if(!S.settled.n[i]) S.dice.n[i] = rand(NUM_FACES);
+    }
+    if(step >= 5 && (step-5) % 2 === 0){
+      const o = order[(step-5)/2];
+      if(o){ S.settled[o.t][o.i] = true; S.dice[o.t][o.i] = final[o.t][o.i]; }
+    }
+    render();
+    if(S.settled.c.every(Boolean) && S.settled.n.every(Boolean)){
+      clearInterval(iv);
+      S.rolling = false;
+      setTimeout(() => { S.settled = null; toTurn(); }, 550);
+    }
+  }, 70);
+}
+function submitEntry(){
+  if(S.entry.c.some(x=>x===null) || S.entry.n.some(x=>x===null))
+    return setErr("Bitte alle Würfel eintragen.");
+  S.dice = { c:S.entry.c.slice(), n:S.entry.n.slice() };
+  S.entry = null; errMsg = ""; toTurn();
+}
+function toTurn(){
+  if(S.qi >= S.queue.length){ endRound(); return; }
+  clearSel(); errMsg = "";
+  const p = curPlayer();
+  if(p.isBot){ S.phase = "choose"; render(); setTimeout(botMove, 700); return; }
+  S.phase = (S.mode === "pass") ? "handoff" : "choose";
+  render();
+}
+const curPlayer = () => S.players[S.queue[S.qi]];
+const isActiveTurn = () => S.qi === 0;
+
+function availableDice(){
+  const all = { c:S.dice.c.map((v,i)=>({v,i,gone:false})),
+                n:S.dice.n.map((v,i)=>({v,i,gone:false})) };
+  if(S.round <= 3 || isActiveTurn() || S.removed.length === 0) return all;
+  for(const d of S.removed){ if(d.t==="c") all.c[d.i].gone = true; else all.n[d.i].gone = true; }
+  return all;
+}
+function faceC(){ return S.diceMode==="sheet" ? S.sel.fc : (S.sel.c===null ? null : S.dice.c[S.sel.c]); }
+function faceN(){ return S.diceMode==="sheet" ? S.sel.fn : (S.sel.n===null ? null : S.dice.n[S.sel.n]); }
+function effColor(){ const f = faceC(); if(f===null) return null; return f==="J" ? S.sel.jc : f; }
+function effNum(){ const f = faceN(); if(f===null) return null; return f==="?" ? S.sel.jn : f; }
+function jokersNeeded(){
+  let j = 0;
+  if(faceC() === "J") j++;
+  if(faceN() === "?") j++;
+  return j;
+}
+function confirmMove(){
+  const p = curPlayer(), color = effColor(), num = effNum();
+  if(!color || !num) return setErr("Erst einen Farb- und einen Zahlenwürfel antippen.");
+  const need = jokersNeeded();
+  if(p.jokersUsed + need > MAX_JOKER) return setErr("Nicht mehr genug Ausrufezeichen.");
+  const err = validate(p, color, num, S.sel.cells);
+  if(err) return setErr(err);
+  S.sel.cells.forEach(k => p.crossed.add(k));
+  p.jokersUsed += need;
+  if(S.diceMode !== "sheet" && isActiveTurn() && S.round > 3)
+    S.removed = [{t:"c",i:S.sel.c},{t:"n",i:S.sel.n}];
+  S.qi++; toTurn();
+}
+function passMove(){
+  if(S.diceMode !== "sheet" && isActiveTurn() && S.round > 3) S.removed = [];
+  S.qi++; toTurn();
+}
+function endRound(){
+  const newCols = S.players.map(p => {
+    const d = []; for(let c=0;c<COLS;c++) if(!(c in p.cols) && colComplete(p,c)) d.push(c); return d;
+  });
+  for(let c=0;c<COLS;c++){
+    const who = newCols.map((d,i)=>d.includes(c)?i:-1).filter(i=>i>=0);
+    if(!who.length) continue;
+    if(!S.colTopTaken[c]){
+      who.forEach(i => S.players[i].cols[c] = COL_TOP[c]);
+      S.colTopTaken[c] = true;
+      S.players.forEach((p,i)=>{ if(!who.includes(i)) p.colsLostTop.add(c); });
+    } else who.forEach(i => S.players[i].cols[c] = COL_BOT[c]);
+  }
+  const newBon = S.players.map(p => CLIST.filter(x => !(x in p.bonus) && colorComplete(p,x)));
+  for(const col of CLIST){
+    const who = newBon.map((d,i)=>d.includes(col)?i:-1).filter(i=>i>=0);
+    if(!who.length) continue;
+    if(!S.bonusTopTaken[col]){
+      who.forEach(i => S.players[i].bonus[col] = 5);
+      S.bonusTopTaken[col] = true;
+      S.players.forEach((p,i)=>{ if(!who.includes(i)) p.bonusLostTop.add(col); });
+      S.log.push(CNAME[col]+" zuerst voll: "+who.map(i=>S.players[i].name).join(", "));
+    } else who.forEach(i => S.players[i].bonus[col] = 3);
+  }
+  if(S.players.some(p => Object.keys(p.bonus).length >= 2) || S.round >= S.maxRounds){
+    S.over = true; S.phase = "over"; render(); return;
+  }
+  S.round++; S.activeIdx = (S.activeIdx + 1) % S.players.length;
+  beginRound();
+}
+
+/* Bot */
+function botMove(){
+  const p = curPlayer(), av = availableDice();
+  let best = null;
+  for(const cd of av.c){
+    if(cd.gone) continue;
+    for(const nd of av.n){
+      if(nd.gone) continue;
+      const jk = (cd.v==="J"?1:0) + (nd.v==="?"?1:0);
+      if(p.jokersUsed + jk > MAX_JOKER) continue;
+      for(const color of (cd.v==="J" ? CLIST : [cd.v]))
+        for(const num of (nd.v==="?" ? [5,4,3,2,1] : [nd.v]))
+          for(const cells of enumerate(p, color, num, 100)){
+            const v = evalMove(p, cells, num, jk);
+            if(!best || v > best.v) best = { v, cells, c:cd.i, n:nd.i, color, num };
+          }
+    }
+  }
+  if(!best){ passMove(); return; }
+  S.sel = { c:best.c, n:best.n,
+            jc: S.dice.c[best.c]==="J" ? best.color : null,
+            jn: S.dice.n[best.n]==="?" ? best.num : null,
+            cells: best.cells };
+  confirmMove();
+}
+function evalMove(p, cells, num, jk){
+  let v = num*2 - jk*3.5;
+  const tmp = new Set(p.crossed); cells.forEach(k => tmp.add(k));
+  const fake = { crossed: tmp };
+  for(let c=0;c<COLS;c++)
+    if(!(c in p.cols) && colComplete(fake,c) && !colComplete(p,c))
+      v += (S.colTopTaken[c] ? COL_BOT[c] : COL_TOP[c]) * 2.2;
+  for(const col of CLIST)
+    if(!(col in p.bonus) && colorComplete(fake,col) && !colorComplete(p,col)) v += 9;
+  for(const k of cells){
+    const [r,c] = k.split(",").map(Number);
+    if(isStar(r,c)) v += 2.5;
+    v += Math.abs(c - START_COL) * 0.12;
+  }
+  return v;
+}
+
+/* ==========================================================
+   4. OBERFLÄCHE
+   ========================================================== */
+let errMsg = "", screen = "home", editMode = "color", showHelp = true;
+let cfg = { mode:"pass", diceMode:"app", soloDice:4, count:2,
+            names:["Loris","Mama","Spieler 3","Spieler 4"] };
+const el = document.getElementById("app");
+const setErr = m => { errMsg = m; render(); };
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch]));
+
+/* Eigene Rückfrage statt confirm(): native Dialoge werden in eingebetteten
+   Ansichten blockiert, und dann passiert beim Tippen scheinbar gar nichts. */
+let ask = null;
+function askConfirm(text, yesLabel, cb){ ask = { text, yesLabel, cb }; render(); }
+function askYes(){ const cb = ask.cb; ask = null; cb(); render(); }
+function askNo(){ ask = null; render(); }
+function askHTML(){
+  return `<div class="overlay" onclick="askNo()">
+    <div class="box" onclick="event.stopPropagation()">
+      <p>${esc(ask.text)}</p>
+      <div class="row">
+        <button class="grow" onclick="askNo()">Abbrechen</button>
+        <button class="grow primary" onclick="askYes()">${esc(ask.yesLabel)}</button>
+      </div>
+    </div></div>`;
+}
+
+function render(){
+  paint();
+  if(ask) el.insertAdjacentHTML("beforeend", askHTML());
+}
+function paint(){
+  if(screen === "home") return renderHome();
+  if(screen === "editor") return renderEditor();
+  if(S && S.over) return renderResults();
+  if(S && S.phase === "entry") return renderEntry();
+  if(S && S.phase === "roll") return renderRoll();
+  if(S && S.phase === "handoff") return renderHandoff();
+  return renderGame();
+}
+
+/* --- Würfeln --- */
+function renderRoll(){
+  const p = S.players[S.activeIdx], N = S.nDice;
+  const face = (t,i) => {
+    if(!S.dice) return null;
+    return S.dice[t][i];
+  };
+  const cls = (t,i) => {
+    if(!S.dice) return "empty";
+    const settled = S.settled ? S.settled[t][i] : true;
+    const base = t==="c" ? (face(t,i)==="J" ? "J" : face(t,i)) : "n";
+    return base + (S.rolling ? (settled ? " land" : " shake") : "");
+  };
+  let h = `<div class="who" style="margin-top:26px">${esc(p.name)} würfelt</div>
+    <p class="mini" style="margin-bottom:16px">Runde ${S.round}${S.mode==="solo"?" von 30":""}
+      · ${N} Farb- und ${N} Zahlenwürfel</p>
+    <div class="card cup" onclick="doRoll()"><div class="dicerow"><div class="dice">`;
+  for(let i=0;i<N;i++)
+    h += `<div class="die ${cls("c",i)}">${
+      !S.dice ? "?" : (face("c",i)==="J" ? "&#10006;" : "")}</div>`;
+  h += `</div><div class="dice">`;
+  for(let i=0;i<N;i++)
+    h += `<div class="die ${cls("n",i)}">${!S.dice ? "?" : face("n",i)}</div>`;
+  h += `</div></div></div>`;
+  h += S.dice
+    ? `<p class="step">${S.rolling ? "Die Würfel rollen …" : "Los geht's"}</p>`
+    : `<button class="go" style="width:100%;font-size:20px;padding:18px" onclick="doRoll()">Würfeln</button>
+       <button class="quiet" style="width:100%;margin-top:8px" onclick="quit()">Spiel beenden</button>`;
+  el.innerHTML = h;
+}
+
+/* --- Start --- */
+function renderHome(){
+  const probs = checkBoard(BOARD);
+  el.innerHTML = `
+  <h1>Noch <em>mal!</em></h1>
+  <p class="lede">Ein Handy, zwei Daumen.</p>
+  ${probs.length ? `<div class="card" style="background:#4a3a34">
+    <b>Spielblatt prüfen</b>
+    <p class="mini" style="text-align:left;margin:6px 0 10px">${probs.length} Abweichung${probs.length>1?"en":""} von den Regeln.</p>
+    <button class="primary" style="width:100%" onclick="go('editor')">Blatt bearbeiten</button></div>` : ""}
+
+  <div class="card">
+    <label class="small">Wer spielt?</label>
+    <div class="tabs" style="margin-bottom:12px">
+      <button class="${cfg.mode==="pass"?"on":""}" onclick="setCfg('mode','pass')">Ein Handy</button>
+      <button class="${cfg.mode==="sheet"?"on":""}" onclick="setCfg('mode','sheet')">Eigener Zettel</button>
+      <button class="${cfg.mode==="bot"?"on":""}" onclick="setCfg('mode','bot')">Gegen KI</button>
+      <button class="${cfg.mode==="solo"?"on":""}" onclick="setCfg('mode','solo')">Allein</button>
+    </div>
+    ${cfg.mode==="sheet" ? `<p class="mini" style="text-align:left;margin:0 0 12px">Jeder spielt auf seinem eigenen Handy, gewürfelt wird einmal für alle – mit echten Würfeln oder auf einem Gerät. Du tippst nur ein, welche Kombination du nimmst.</p>` : ""}
+    ${cfg.mode==="pass" ? `
+      <label class="small">Wie viele?</label>
+      <div class="tabs" style="margin-bottom:12px">
+        ${[2,3,4].map(k => `<button class="${cfg.count===k?"on":""}" onclick="setCfg('count',${k})">${k} Personen</button>`).join("")}
+      </div>` : ""}
+    ${cfg.mode==="solo" ? `
+      <label class="small">Solo-Würfel</label>
+      <div class="tabs" style="margin-bottom:12px">
+        <button class="${cfg.soloDice===4?"on":""}" onclick="setCfg('soloDice',4)">4 Würfel</button>
+        <button class="${cfg.soloDice===6?"on":""}" onclick="setCfg('soloDice',6)">6 Würfel</button>
+      </div>
+      <p class="mini" style="text-align:left;margin:0 0 12px">${cfg.soloDice===4
+        ? "So steht es in der Anleitung: solo nur 2 Farb- und 2 Zahlenwürfel, 30 Würfe."
+        : "Hausregel: wie zu zweit mit allen 6 Würfeln, weiterhin 30 Würfe."}</p>` : ""}
+    ${cfg.mode!=="sheet" ? `<label class="small">Würfel</label>
+    <div class="tabs" style="margin-bottom:12px">
+      <button class="${cfg.diceMode==="app"?"on":""}" onclick="setCfg('diceMode','app')">Digitale Würfel</button>
+      <button class="${cfg.diceMode==="manual"?"on":""}" onclick="setCfg('diceMode','manual')">Echte Würfel</button>
+    </div>
+    <p class="mini" style="text-align:left;margin:0 0 12px">${
+      cfg.diceMode==="app" ? "Würfel antippen – sie rollen und bleiben liegen."
+      : "Ihr würfelt selbst und tippt das Ergebnis ein."}
+      ${cfg.mode==="solo" ? " Solo: "+(cfg.soloDice/2)+" Farb- und "+(cfg.soloDice/2)+" Zahlenwürfel."
+                          : " 3 Farb- und 3 Zahlenwürfel."}</p>` : ""}
+    ${(() => {
+      const n = cfg.mode==="pass" ? cfg.count : (cfg.mode==="bot" ? 2 : 1);
+      let out = "";
+      for(let i=0;i<n;i+=2){
+        out += `<div class="row" style="margin-bottom:12px">`;
+        for(let j=i;j<Math.min(i+2,n);j++)
+          out += `<div class="grow"><label class="small">${
+            n===1 ? "Dein Name" : (j===1 && cfg.mode==="bot" ? "KI-Gegner" : "Name "+(j+1))
+          }</label><input type="text" value="${esc(cfg.names[j])}"
+            oninput="cfg.names[${j}]=this.value"></div>`;
+        if(n===1 || (n%2===1 && i+2>n)) out += `<div class="grow"></div>`;
+        out += `</div>`;
+      }
+      return out;
+    })()}
+    <button class="go" style="width:100%;font-size:19px" onclick="begin()">Losspielen</button>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <span>Felder-Hilfe anzeigen</span>
+      <button onclick="toggleHelp()">${showHelp ? "An" : "Aus"}</button>
+    </div>
+    <p class="mini" style="text-align:left;margin:8px 0 0">Blendet die Kästchen aus, die gerade nicht erlaubt sind.</p>
+  </div>
+  <button class="quiet" style="width:100%" onclick="go('editor')">Spielblatt bearbeiten</button>`;
+}
+function setCfg(k,v){ cfg[k] = v; render(); }
+function toggleHelp(){ showHelp = !showHelp; render(); }
+function go(s){ screen = s; render(); }
+function begin(){
+  if(checkBoard(BOARD).length)
+    return askConfirm("Das Blatt ist noch nicht regelkonform. Trotzdem starten?",
+                      "Starten", startNow);
+  startNow();
+}
+function startNow(){
+  screen = "game";
+  startGame({ mode:cfg.mode, diceMode:cfg.diceMode,
+    soloDice: cfg.soloDice,
+    names: (cfg.mode==="solo"||cfg.mode==="sheet")
+      ? [cfg.names[0]||"Du"]
+      : cfg.names.slice(0, cfg.mode==="bot" ? 2 : cfg.count)
+                 .map((n,i) => n || ("Spieler "+(i+1))) });
+}
+
+/* --- Blatt zeichnen --- */
+function sheetHTML(p, o){
+  o = o || {};
+  let h = '<div class="sheet"><div class="letters">';
+  for(let c=0;c<COLS;c++) h += `<div class="${c===START_COL?"h":""}">${String.fromCharCode(65+c)}</div>`;
+  h += '</div><div class="grid">';
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const k = key(r,c), cls = ["cell", BOARD.grid[r][c]];
+    if(p && p.crossed.has(k)) cls.push("crossed");
+    if(o.sel && o.sel.includes(k)) cls.push("sel");
+    else if(o.can && o.can.has(k)) cls.push("can");
+    if(o.off && o.off(r,c)) cls.push("off");
+    h += `<div class="${cls.join(" ")}" onclick="${o.click||"0"}(${r},${c})">`
+       + (isStar(r,c) ? '<span class="star">&#9733;</span>' : "") + "</div>";
+  }
+  const tapVals = p && S && S.diceMode === "sheet" && !S.over;
+  h += '</div><div class="vals">';
+  for(let c=0;c<COLS;c++){
+    const won = p && p.cols[c] === COL_TOP[c];
+    const gone = p && (p.colsLostTop.has(c) || (S && S.colTopTaken[c] && !won));
+    const tap = tapVals && (c in p.cols) ? ` onclick="toggleCol(${c})"` : "";
+    h += `<div class="${won?"won":gone?"gone":""}"${tap}>${COL_TOP[c]}</div>`;
+  }
+  h += '</div><div class="vals bot">';
+  for(let c=0;c<COLS;c++){
+    const tap = tapVals && (c in p.cols) ? ` onclick="toggleCol(${c})"` : "";
+    h += `<div class="${p && p.cols[c]===COL_BOT[c] ? "won":""}"${tap}>${COL_BOT[c]}</div>`;
+  }
+  h += "</div>";
+  if(p){
+    h += '<div class="jokers"><span class="jlab">?/&#10006; =</span>';
+    for(let i=0;i<MAX_JOKER;i++) h += `<span class="jok ${i<p.jokersUsed?"used":""}">!</span>`;
+    h += '</div><div class="bonusgrid">';
+    for(const col of CLIST){
+      const got = p.bonus[col], lost = p.bonusLostTop.has(col) && got !== 5;
+      const tapB = S && S.diceMode === "sheet" && !S.over && (col in p.bonus)
+        ? ` onclick="toggleBonus('${col}')"` : "";
+      h += `<div class="bpair">
+        <span class="bbox ${got===5?"circ":""} ${lost?"gone":""}" style="background:var(--${col})"${tapB}>5</span>
+        <span class="bbox ${got===3?"circ":""}" style="background:var(--${col})"${tapB}>3</span></div>`;
+    }
+    h += "</div>";
+    const s = score(p);
+    h += `<div class="sum">
+      <div class="lbl">Bonus</div><div class="num">${s.bon}</div>
+      <div class="lbl">A&#8211;O</div><div class="num">+${s.cols}</div>
+      <div class="lbl">! (+1)</div><div class="num">+${s.jok}</div>
+      <div class="lbl">&#9733; (&#8722;2)</div><div class="num">${s.stars}</div>
+      <div class="rule"></div>
+      <div class="lbl big">Total</div><div class="num big">${s.total}</div></div>`;
+  }
+  return h + "</div>";
+}
+
+/* --- Würfel eintragen --- */
+function renderEntry(){
+  const e = S.entry, slot = e.slot;
+  let h = `<div class="who" style="margin-top:18px">Würfel eintragen</div>
+    <p class="mini">Runde ${S.round}${S.mode==="solo"?" von 30":""} · ${esc(S.players[S.activeIdx].name)} würfelt</p>
+    <p class="mini" style="margin-bottom:14px">${S.nDice} Farb- und ${S.nDice} Zahlenwürfel${
+      S.mode==="solo" && S.nDice===2 ? " (Solo-Regel)" : ""}</p>
+    <div class="card"><div class="dicerow">
+      <div class="dice">`;
+  e.c.forEach((v,i) => h += `<div class="die ${v===null?"empty":(v==="J"?"J":v)}
+      ${slot.t==="c"&&slot.i===i?"pick":""}" onclick="pickSlot('c',${i})">${
+      v===null ? "+" : (v==="J" ? "&#10006;" : "")}</div>`);
+  h += `</div><div class="dice">`;
+  e.n.forEach((v,i) => h += `<div class="die ${v===null?"empty":"n"}
+      ${slot.t==="n"&&slot.i===i?"pick":""}" onclick="pickSlot('n',${i})">${v===null?"+":v}</div>`);
+  h += `</div></div></div>`;
+
+  h += `<div class="card"><p class="mini" style="margin:0 0 10px">${
+    slot.t==="c" ? "Welche Farbe zeigt Würfel "+(slot.i+1)+"?" : "Welche Zahl zeigt Würfel "+(slot.i+1)+"?"}</p>
+    <div class="dice" style="flex-wrap:wrap">`;
+  if(slot.t === "c"){
+    CLIST.forEach(x => h += `<div class="die small-die ${x}" onclick="setFace('${x}')"></div>`);
+    h += `<div class="die small-die J" onclick="setFace('J')">&#10006;</div>`;
+  } else {
+    [1,2,3,4,5].forEach(x => h += `<div class="die small-die n" onclick="setFace(${x})">${x}</div>`);
+    h += `<div class="die small-die n" onclick="setFace('?')">?</div>`;
+  }
+  h += `</div></div><p class="err">${esc(errMsg)}</p>
+    <button class="go" style="width:100%;font-size:19px" onclick="submitEntry()">Wurf übernehmen</button>
+    <button class="quiet" style="width:100%" onclick="quit()">Spiel beenden</button>`;
+  el.innerHTML = h;
+}
+function pickSlot(t,i){ S.entry.slot = {t,i}; errMsg=""; render(); }
+function setFace(v){
+  const e = S.entry, s = e.slot;
+  e[s.t][s.i] = v;
+  const order = [];
+  for(let i=0;i<S.nDice;i++) order.push({t:"c",i});
+  for(let i=0;i<S.nDice;i++) order.push({t:"n",i});
+  const next = order.find(o => e[o.t][o.i] === null);
+  if(next) e.slot = next;
+  errMsg = ""; render();
+}
+
+/* --- Übergabe --- */
+function renderHandoff(){
+  const p = curPlayer();
+  el.innerHTML = `<div style="padding-top:60px">
+    <p class="mini">Runde ${S.round}</p>
+    <div class="who" style="font-size:34px">${esc(p.name)}</div>
+    <p class="mini" style="margin-bottom:26px">${isActiveTurn()
+      ? "ist dran und darf zuerst wählen" : "wählt aus den übrigen Würfeln"}</p>
+    <button class="go" style="width:100%;font-size:20px;padding:18px" onclick="startTurn()">Weiter</button>
+    <button class="quiet" style="width:100%;margin-top:8px" onclick="quit()">Spiel beenden</button></div>`;
+}
+function startTurn(){ S.phase = "choose"; render(); }
+
+/* --- Spielzug --- */
+function renderGame(){
+  const p = curPlayer(), sheetMode = S.diceMode === "sheet";
+  const av = sheetMode ? null : availableDice();
+  const color = effColor(), num = effNum();
+  let can = null, offFn = null, step = "";
+
+  if(!color || !num){
+    step = "Farbe und Zahl antippen";
+  } else {
+    can = playableCells(p, color, num);
+    if(showHelp) offFn = (r,c) => !can.has(key(r,c)) && !S.sel.cells.includes(key(r,c));
+    const left = num - S.sel.cells.length;
+    if(can.size === 0) step = "Damit geht kein Zug<span class='muted'>Andere Kombination wählen oder passen</span>";
+    else if(left > 0) step = "Noch "+left+" Kästchen antippen<span class='muted'>"+
+      CNAME[color]+", "+num+" Stück, alle aneinander</span>";
+    else step = "Fertig<span class='muted'>Unten auf Ankreuzen tippen</span>";
+  }
+  const ready = color && num && S.sel.cells.length === num && !validate(p,color,num,S.sel.cells);
+
+  let h = `<div class="row" style="margin:10px 0 0">
+      <div class="grow"><b style="font-size:20px">${esc(p.name)}</b>
+        <div class="mini" style="text-align:left">${sheetMode?"Wurf":"Runde"} ${S.round}${S.mode==="solo"?" von 30":""} ·
+          ${MAX_JOKER-p.jokersUsed} Ausrufezeichen übrig</div></div>
+      <button class="quiet" onclick="quit()">Ende</button></div>`;
+
+  h += `<div class="card" style="margin-top:10px">`;
+  if(sheetMode){
+    h += `<p class="mini" style="margin:0 0 8px">Was zeigen die Würfel auf dem Tisch?</p>
+          <div class="dicerow"><div class="dice" style="flex-wrap:wrap">`;
+    CLIST.forEach(x => h += `<div class="die small-die ${x} ${S.sel.fc===x?"pick":""}"
+        onclick="setFC('${x}')"></div>`);
+    h += `<div class="die small-die J ${S.sel.fc==="J"?"pick":""}" onclick="setFC('J')">&#10006;</div>`;
+    h += `</div><div class="dice" style="flex-wrap:wrap">`;
+    [1,2,3,4,5].forEach(x => h += `<div class="die small-die n ${S.sel.fn===x?"pick":""}"
+        onclick="setFN(${x})">${x}</div>`);
+    h += `<div class="die small-die n ${S.sel.fn==="?"?"pick":""}" onclick="setFN('?')">?</div>`;
+    h += `</div></div>`;
+  } else {
+    h += `<div class="dicerow"><div class="dice">`;
+    av.c.forEach(d => h += `<div class="die ${d.v==="J"?"J":d.v} ${d.gone?"gone":""}
+        ${S.sel.c===d.i?"pick":""}" onclick="pickC(${d.i})">${d.v==="J"?"&#10006;":""}</div>`);
+    h += `</div><div class="dice">`;
+    av.n.forEach(d => h += `<div class="die n ${d.gone?"gone":""}
+        ${S.sel.n===d.i?"pick":""}" onclick="pickN(${d.i})">${d.v}</div>`);
+    h += `</div></div>`;
+  }
+
+  if(faceC() === "J"){
+    h += `<p class="mini" style="margin:12px 0 6px">Joker: welche Farbe?</p><div class="dice">`;
+    CLIST.forEach(x => h += `<div class="die small-die ${x} ${S.sel.jc===x?"pick":""}"
+        onclick="setJC('${x}')"></div>`);
+    h += `</div>`;
+  }
+  if(faceN() === "?"){
+    h += `<p class="mini" style="margin:12px 0 6px">Joker: welche Zahl?</p><div class="dice">`;
+    [1,2,3,4,5].forEach(x => h += `<div class="die small-die n ${S.sel.jn===x?"pick":""}"
+        onclick="setJN(${x})">${x}</div>`);
+    h += `</div>`;
+  }
+  h += `</div><div class="step">${step}</div>`;
+  h += sheetHTML(p, { click:"tapCell", sel:S.sel.cells, can, off:offFn });
+  h += `<p class="err">${esc(errMsg)}</p>
+    <div class="row">
+      <button class="grow" onclick="passMove()">Passen</button>
+      <button class="grow go" onclick="confirmMove()" ${ready?"":"disabled"}>Ankreuzen</button>
+    </div>`;
+  const others = S.players.filter(x => x !== p);
+  if(others.length)
+    h += `<p class="mini" style="margin-top:12px">` +
+         others.map(o => esc(o.name)+": "+score(o).total).join(" · ") + ` Punkte</p>`;
+  el.innerHTML = h;
+}
+function setFC(x){ S.sel.fc = S.sel.fc===x ? null : x; S.sel.jc=null; S.sel.cells=[]; setErr(""); }
+function setFN(x){ S.sel.fn = S.sel.fn===x ? null : x; S.sel.jn=null; S.sel.cells=[]; setErr(""); }
+function pickC(i){ const av=availableDice(); if(av.c[i].gone) return;
+  S.sel.c = S.sel.c===i ? null : i; S.sel.jc=null; S.sel.cells=[]; setErr(""); }
+function pickN(i){ const av=availableDice(); if(av.n[i].gone) return;
+  S.sel.n = S.sel.n===i ? null : i; S.sel.jn=null; S.sel.cells=[]; setErr(""); }
+function setJC(x){ S.sel.jc=x; S.sel.cells=[]; setErr(""); }
+function setJN(x){ S.sel.jn=x; S.sel.cells=[]; setErr(""); }
+function tapCell(r,c){
+  const p = curPlayer(), color = effColor(), num = effNum();
+  if(!color || !num) return setErr("Erst Farbe und Zahl antippen.");
+  const k = key(r,c), i = S.sel.cells.indexOf(k);
+  if(i >= 0){ S.sel.cells.splice(i,1); return setErr(""); }
+  if(p.crossed.has(k)) return setErr("Das Kästchen ist schon angekreuzt.");
+  if(BOARD.grid[r][c] !== color) return setErr("Dieses Kästchen ist nicht "+CNAME[color]+".");
+  if(S.sel.cells.length >= num) return setErr("Mehr als "+num+" geht nicht.");
+  S.sel.cells.push(k); setErr("");
+}
+/* Im Zettel-Modus weiss das Handy nicht, wer zuerst fertig war – deshalb
+   laesst sich der Wert antippen und zwischen Erster und Spaeter umschalten. */
+function toggleCol(c){
+  const p = S.players[0];
+  if(!(c in p.cols)) return;
+  p.cols[c] = p.cols[c] === COL_TOP[c] ? COL_BOT[c] : COL_TOP[c];
+  render();
+}
+function toggleBonus(col){
+  const p = S.players[0];
+  if(!(col in p.bonus)) return;
+  p.bonus[col] = p.bonus[col] === 5 ? 3 : 5;
+  render();
+}
+function quit(){ askConfirm("Spiel beenden und auswerten?", "Auswerten",
+  () => { S.over = true; }); }
+
+/* --- Auswertung --- */
+function renderResults(){
+  const rows = S.players.map(p => ({p, s:score(p)}))
+    .sort((a,b) => b.s.total - a.s.total || b.s.jok - a.s.jok);
+  // Bei Gleichstand gewinnt, wer mehr Ausrufezeichen übrig hat.
+  const top = rows[0].s.total, bestJok = rows[0].s.jok;
+  const win = rows.filter(r => r.s.total === top && r.s.jok === bestJok);
+  const tie = rows.filter(r => r.s.total === top).length > win.length;
+  let h = `<h1>Auswertung</h1>
+    <div class="card"><div class="who" style="font-size:22px">
+      ${win.map(w=>esc(w.p.name)).join(" und ")} gewinnt${win.length>1?"en":""}</div>
+      <p class="mini">mit ${top} Punkten${tie ? " – bei Gleichstand entscheiden die übrigen Ausrufezeichen" : ""}</p></div>
+    <div class="card"><table><tr><th></th><th>A–O</th><th>Bonus</th><th>!</th><th>&#9733;</th><th>Total</th></tr>`;
+  rows.forEach(r => h += `<tr><td>${esc(r.p.name)}</td><td>${r.s.cols}</td><td>${r.s.bon}</td>
+    <td>+${r.s.jok}</td><td>${r.s.stars}</td><td><b>${r.s.total}</b></td></tr>`);
+  h += `</table></div>`;
+  S.players.forEach(p => { h += `<p class="mini" style="text-align:left">${esc(p.name)}</p>` + sheetHTML(p,{}); });
+  h += `<div class="row"><button class="grow go" onclick="begin()">Noch mal!</button>
+    <button class="grow" onclick="go('home')">Startseite</button></div>`;
+  el.innerHTML = h;
+}
+
+/* --- Blatt-Editor --- */
+function renderEditor(){
+  const probs = checkBoard(BOARD);
+  let h = `<h1>Spielblatt</h1>
+    <p class="lede">Tippen ändert die angetippte Zelle.</p>
+    <div class="card"><div class="tabs">
+      <button class="${editMode==="color"?"on":""}" onclick="setEdit('color')">Farbe wechseln</button>
+      <button class="${editMode==="star"?"on":""}" onclick="setEdit('star')">Stern setzen</button>
+    </div><p class="mini" style="text-align:left;margin:10px 0 0">${editMode==="color"
+      ? "Grün &#8594; Gelb &#8594; Blau &#8594; Rot &#8594; Orange"
+      : "Stern setzen oder entfernen"}</p></div>`;
+  h += sheetHTML(null, { click:"editCell" });
+  h += `<div class="card">` + (probs.length
+    ? `<b>Noch offen</b><ul class="probs">${probs.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`
+    : `<b>Blatt ist regelkonform.</b><p class="mini" style="text-align:left;margin:6px 0 0">Jede Spalte enthält alle fünf Farben, jede Farbe 21 Felder.</p>`)
+    + `</div>
+    <div class="card">
+      <button class="primary" style="width:100%" onclick="shuffleBoard()">Neues Blatt auswürfeln</button>
+      <p class="mini" style="text-align:left;margin:10px 0 0">Erzeugt ein anderes, regelkonformes Blatt – gleiche Regeln, neues Rätsel.</p>
+    </div>
+    <div class="row">
+      <button class="grow" onclick="resetBoard()">Echtes Blatt</button>
+      <button class="grow go" onclick="go('home')">Fertig</button></div>`;
+  el.innerHTML = h;
+}
+function setEdit(m){ editMode = m; render(); }
+function editCell(r,c){
+  if(editMode === "color"){
+    const i = CLIST.indexOf(BOARD.grid[r][c]);
+    BOARD.grid[r][c] = CLIST[(i+1) % CLIST.length];
+  } else {
+    const k = key(r,c), i = BOARD.stars.indexOf(k);
+    if(i >= 0) BOARD.stars.splice(i,1); else BOARD.stars.push(k);
+  }
+  saveBoard(BOARD); render();
+}
+function shuffleBoard(){ BOARD = randomBoard(); saveBoard(BOARD); render(); }
+function resetBoard(){
+  askConfirm("Zurück zum echten Spielblatt?", "Zurücksetzen",
+    () => { BOARD = clone(ORIGINAL); saveBoard(BOARD); });
+}
+
+render();
+
+/* Offline-Betrieb: beim ersten Aufruf ablegen, danach ohne Netz startklar.
+   Schlägt es fehl (z. B. lokal geöffnet), läuft die App trotzdem normal weiter. */
+if("serviceWorker" in navigator && location.protocol.startsWith("http"))
+  window.addEventListener("load", () =>
+    navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
