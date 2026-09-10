@@ -178,6 +178,21 @@ function loadBoard(){
 function saveBoard(b){ try{ localStorage.setItem("nochmal.board2", JSON.stringify(b)); }catch(e){} }
 let BOARD = loadBoard();
 
+/* Sammlung eigener Blätter. Liegt neben dem aktuellen Blatt im Gerätespeicher,
+   ist also pro Handy – deine Blätter landen nicht automatisch bei Mama. */
+const LIB_MAX = 20;
+let libError = "";
+function loadLibrary(){
+  try{ const r = localStorage.getItem("nochmal.library"); if(r) return JSON.parse(r); }catch(e){}
+  return [];
+}
+function saveLibrary(){
+  try{ localStorage.setItem("nochmal.library", JSON.stringify(LIB)); libError = ""; return true; }
+  catch(e){ libError = "Speichern nicht möglich – der Gerätespeicher ist voll oder gesperrt."; return false; }
+}
+let LIB = loadLibrary();
+let currentId = null;
+
 const key = (r,c) => r+","+c;
 const isStar = (r,c) => BOARD.stars.includes(key(r,c));
 const nb = (r,c) => [[r-1,c],[r+1,c],[r,c-1],[r,c+1]]
@@ -336,7 +351,9 @@ function startGame(cfg){
   const names = (cfg.mode==="sheet" || cfg.mode==="solo") ? cfg.names.slice(0,1) : cfg.names;
   const players = names.map((n,i) => newPlayer(n, cfg.mode==="bot" && i>0));
   S = {
-    mode: cfg.mode, diceMode: cfg.mode==="sheet" ? "sheet" : cfg.diceMode, players,
+    mode: cfg.mode,
+    diceMode: cfg.mode==="sheet" ? (cfg.diceMode==="app" ? "app" : "sheet") : cfg.diceMode,
+    players,
     nDice: cfg.mode==="solo" ? cfg.soloDice/2 : 3,
     maxRounds: cfg.mode==="solo" ? 30 : Infinity,
     round: 1, activeIdx: 0, dice:null, removed:[], queue:[], qi:0,
@@ -614,7 +631,15 @@ function renderHome(){
       <button class="${cfg.mode==="bot"?"on":""}" onclick="setCfg('mode','bot')">Gegen KI</button>
       <button class="${cfg.mode==="solo"?"on":""}" onclick="setCfg('mode','solo')">Allein</button>
     </div>
-    ${cfg.mode==="sheet" ? `<p class="mini" style="text-align:left;margin:0 0 12px">Jeder spielt auf seinem eigenen Handy, gewürfelt wird einmal für alle – mit echten Würfeln oder auf einem Gerät. Du tippst nur ein, welche Kombination du nimmst.</p>` : ""}
+    ${cfg.mode==="sheet" ? `<p class="mini" style="text-align:left;margin:0 0 12px">Jeder spielt auf seinem eigenen Handy. Gewürfelt wird einmal für alle sichtbar.</p>
+      <label class="small">Wer würfelt?</label>
+      <div class="tabs" style="margin-bottom:12px">
+        <button class="${cfg.diceMode==="app"?"on":""}" onclick="setCfg('diceMode','app')">Dieses Handy</button>
+        <button class="${cfg.diceMode!=="app"?"on":""}" onclick="setCfg('diceMode','table')">Woanders</button>
+      </div>
+      <p class="mini" style="text-align:left;margin:0 0 12px">${cfg.diceMode==="app"
+        ? "Dein Handy würfelt die 6 Würfel gross und sichtbar – die anderen schauen mit und tippen auf ihrem Gerät nur ihre Kombination an."
+        : "Es wird mit echten Würfeln oder auf einem anderen Handy gewürfelt. Du tippst an, welche Farbe und Zahl du nimmst."}</p>` : ""}
     ${cfg.mode==="pass" ? `
       <label class="small">Wie viele?</label>
       <div class="tabs" style="margin-bottom:12px">
@@ -798,7 +823,7 @@ function startTurn(){ S.phase = "choose"; render(); }
 
 /* --- Spielzug --- */
 function renderGame(){
-  const p = curPlayer(), sheetMode = S.diceMode === "sheet";
+  const p = curPlayer(), sheetMode = S.diceMode === "sheet", eigenerZettel = S.mode === "sheet";
   const av = sheetMode ? null : availableDice();
   const color = effColor(), num = effNum();
   let can = null, offFn = null, step = "";
@@ -818,7 +843,7 @@ function renderGame(){
 
   let h = `<div class="row" style="margin:10px 0 0">
       <div class="grow"><b style="font-size:20px">${esc(p.name)}</b>
-        <div class="mini" style="text-align:left">${sheetMode?"Wurf":"Runde"} ${S.round}${S.mode==="solo"?" von 30":""} ·
+        <div class="mini" style="text-align:left">${eigenerZettel?"Wurf":"Runde"} ${S.round}${S.mode==="solo"?" von 30":""} ·
           ${MAX_JOKER-p.jokersUsed} Ausrufezeichen übrig</div></div>
       <button class="quiet" onclick="quit()">Ende</button></div>`;
 
@@ -943,9 +968,30 @@ function renderEditor(){
     : `<b>Blatt ist regelkonform.</b><p class="mini" style="text-align:left;margin:6px 0 0">Jede Spalte enthält alle fünf Farben, jede Farbe 21 Felder.</p>`)
     + `</div>
     <div class="card">
-      <button class="primary" style="width:100%" onclick="shuffleBoard()">Neues Blatt auswürfeln</button>
-      <p class="mini" style="text-align:left;margin:10px 0 0">Erzeugt ein anderes, regelkonformes Blatt – gleiche Regeln, neues Rätsel.</p>
-    </div>
+      <div class="row" style="margin-bottom:10px">
+        <button class="grow primary" onclick="shuffleBoard()">Auswürfeln</button>
+        <button class="grow" onclick="saveCurrent()">Blatt speichern</button>
+      </div>
+      <p class="mini" style="text-align:left;margin:0">Auswürfeln erzeugt ein anderes, regelkonformes Blatt. Was dir gefällt, kannst du speichern und später wieder laden.</p>
+      ${libError ? `<p class="err" style="text-align:left">${esc(libError)}</p>` : ""}
+    </div>`;
+
+  h += `<div class="card"><b>Meine Blätter</b>`;
+  if(!LIB.length){
+    h += `<p class="mini" style="text-align:left;margin:8px 0 0">Noch keine gespeichert.</p>`;
+  } else {
+    LIB.forEach(b => {
+      const aktiv = b.id === currentId;
+      h += `<div class="row" style="margin-top:10px">
+        <input type="text" class="grow" value="${esc(b.name)}"
+               oninput="renameBoard('${b.id}', this.value)">
+        <button onclick="loadFromLib('${b.id}')" ${aktiv?"disabled":""}>${aktiv?"aktiv":"Laden"}</button>
+        <button class="warn" onclick="deleteFromLib('${b.id}')">&#10006;</button>
+      </div>`;
+    });
+    h += `<p class="mini" style="text-align:left;margin:10px 0 0">${LIB.length} von ${LIB_MAX} Plätzen belegt.</p>`;
+  }
+  h += `</div>
     <div class="row">
       <button class="grow" onclick="resetBoard()">Echtes Blatt</button>
       <button class="grow go" onclick="go('home')">Fertig</button></div>`;
@@ -962,10 +1008,50 @@ function editCell(r,c){
   }
   saveBoard(BOARD); render();
 }
-function shuffleBoard(){ BOARD = randomBoard(); saveBoard(BOARD); render(); }
+function shuffleBoard(){ BOARD = randomBoard(); currentId = null; saveBoard(BOARD); render(); }
+
+function saveCurrent(){
+  if(LIB.length >= LIB_MAX){
+    libError = "Es passen höchstens " + LIB_MAX + " Blätter hinein – lösche zuerst eines.";
+    return render();
+  }
+  let n = LIB.length + 1;
+  const namen = LIB.map(b => b.name);
+  while(namen.includes("Blatt " + n)) n++;
+  const eintrag = { id: "b" + Date.now().toString(36) + ri(1000),
+                    name: "Blatt " + n,
+                    grid: BOARD.grid.map(r => r.slice()),
+                    stars: BOARD.stars.slice() };
+  LIB.push(eintrag);
+  if(saveLibrary()) currentId = eintrag.id; else LIB.pop();
+  render();
+}
+function renameBoard(id, name){
+  const b = LIB.find(x => x.id === id);
+  if(!b) return;
+  b.name = name.slice(0, 40);
+  saveLibrary();
+}
+function loadFromLib(id){
+  const b = LIB.find(x => x.id === id);
+  if(!b) return;
+  BOARD = { grid: b.grid.map(r => r.slice()), stars: b.stars.slice() };
+  currentId = id;
+  saveBoard(BOARD);
+  render();
+}
+function deleteFromLib(id){
+  const b = LIB.find(x => x.id === id);
+  if(!b) return;
+  askConfirm("„" + b.name + "\u201c löschen?", "Löschen", () => {
+    LIB = LIB.filter(x => x.id !== id);
+    if(currentId === id) currentId = null;
+    saveLibrary();
+  });
+}
 function resetBoard(){
   askConfirm("Zurück zum echten Spielblatt?", "Zurücksetzen",
-    () => { BOARD = clone(ORIGINAL); saveBoard(BOARD); });
+    () => { BOARD = clone(ORIGINAL); currentId = null; saveBoard(BOARD); });
 }
 
 render();
