@@ -22,13 +22,15 @@
 html,body{margin:0;padding:0;background:#26241f;color:var(--ink);
   font-family:ui-rounded,"SF Pro Rounded","Avenir Next",system-ui,sans-serif;
   font-size:17px;overscroll-behavior:none;-webkit-text-size-adjust:100%}
-body{padding:env(safe-area-inset-top) 10px calc(env(safe-area-inset-bottom) + 14px)}
+body{padding:env(safe-area-inset-top) clamp(6px,2.5vw,12px) calc(env(safe-area-inset-bottom) + 14px);
+  overflow-x:hidden}
 .wrap{max-width:560px;margin:0 auto}
-h1{font-size:32px;font-weight:800;letter-spacing:-.02em;margin:16px 0 2px}
+h1{font-size:clamp(25px,7.5vw,32px);font-weight:800;letter-spacing:-.02em;margin:16px 0 2px}
 h1 em{font-style:normal;color:var(--R)}
 p.lede{color:var(--ink-dim);margin:0 0 18px;line-height:1.45}
-.card{background:var(--paper);border-radius:16px;padding:14px;margin-bottom:10px}
-button{font:inherit;font-weight:700;border:none;border-radius:12px;padding:14px 16px;
+.card{background:var(--paper);border-radius:16px;padding:clamp(10px,3.5vw,14px);margin-bottom:10px}
+button{font:inherit;font-weight:700;border:none;border-radius:12px;
+  padding:clamp(11px,3.6vw,14px) clamp(10px,3.5vw,16px);
   background:var(--paper-hi);color:var(--ink);cursor:pointer}
 button:active{transform:scale(.97)}
 button:disabled{opacity:.3}
@@ -41,14 +43,15 @@ button:focus-visible{outline:2px solid var(--Y);outline-offset:2px}
 input[type=text]{font:inherit;background:var(--paper-hi);border:1px solid var(--line);
   color:var(--ink);border-radius:12px;padding:12px;width:100%}
 label.small{font-size:14px;color:var(--ink-dim);display:block;margin-bottom:6px}
-.tabs{display:flex;gap:6px}
-.tabs button{flex:1;padding:12px 6px;font-size:16px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{flex:1 1 0;min-width:84px;padding:clamp(9px,3vw,12px) 4px;
+  font-size:clamp(13px,3.7vw,16px)}
 .tabs button.on{background:var(--ink);color:#26241f}
 
 /* Spielblatt */
 .sheet{background:var(--paper);border-radius:16px;padding:8px;margin-bottom:10px}
 .letters,.vals{display:grid;grid-template-columns:repeat(15,1fr);gap:var(--gap)}
-.letters div{text-align:center;font-size:11px;font-weight:800;color:#26241f;
+.letters div{text-align:center;font-size:clamp(8px,2.3vw,11px);font-weight:800;color:#26241f;
   background:var(--ink);border-radius:4px;padding:2px 0}
 .letters div.h{color:var(--R)}
 .grid{display:grid;grid-template-columns:repeat(15,1fr);gap:var(--gap);margin:var(--gap) 0}
@@ -69,7 +72,7 @@ label.small{font-size:14px;color:var(--ink-dim);display:block;margin-bottom:6px}
 .cell.off{opacity:.2}
 .cell.can::before{content:"";position:absolute;width:30%;height:30%;border-radius:50%;
   background:#26241f59}
-.vals div{text-align:center;font-size:10px;font-weight:700;border-radius:4px;
+.vals div{text-align:center;font-size:clamp(7.5px,2.2vw,10px);font-weight:700;border-radius:4px;
   padding:1px 0;background:var(--ink);color:#26241f}
 .vals.bot div{background:#cdc7b8}
 .vals div.gone{opacity:.28;text-decoration:line-through}
@@ -78,9 +81,9 @@ label.small{font-size:14px;color:var(--ink-dim);display:block;margin-bottom:6px}
 /* Joker-Leiste */
 .jokers{display:flex;align-items:center;gap:4px;background:var(--ink);
   border-radius:8px;padding:4px 5px;margin-top:var(--gap)}
-.jlab{font-size:11px;font-weight:800;color:#26241f;background:#cdc7b8;
+.jlab{font-size:clamp(9px,2.6vw,11px);font-weight:800;color:#26241f;background:#cdc7b8;
   border-radius:4px;padding:2px 5px;white-space:nowrap}
-.jok{flex:1;text-align:center;font-size:13px;font-weight:800;color:#26241f;
+.jok{flex:1;text-align:center;font-size:clamp(10px,3vw,13px);font-weight:800;color:#26241f;
   border:1.5px solid #26241f;border-radius:999px;position:relative;line-height:1.35}
 .jok.used{opacity:.32}
 .jok.used::after{content:"";position:absolute;left:14%;right:14%;top:47%;
@@ -89,21 +92,23 @@ label.small{font-size:14px;color:var(--ink-dim);display:block;margin-bottom:6px}
 /* Bonus + Punkte */
 .bonusgrid{display:flex;gap:5px;margin-top:8px}
 .bpair{flex:1;display:flex;gap:3px}
-.bbox{flex:1;text-align:center;font-size:12px;font-weight:800;color:#fff;
+.bbox{flex:1;text-align:center;font-size:clamp(10px,2.9vw,12px);font-weight:800;color:#fff;
   border-radius:5px;padding:3px 0}
 .bbox.circ{color:#26241f;box-shadow:0 0 0 2px var(--ink)}
 .bbox.gone{opacity:.28;text-decoration:line-through}
-.sum{margin-top:9px;display:grid;grid-template-columns:1fr auto;gap:3px 10px;font-size:14px}
+.sum{margin-top:9px;display:grid;grid-template-columns:1fr auto;gap:3px 10px;
+  font-size:clamp(12px,3.5vw,14px)}
 .sum .lbl{color:var(--ink-dim)}
 .sum .num{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
 .sum .rule{grid-column:1/-1;border-top:1px dashed var(--line);margin-top:3px}
 .sum .big{font-size:17px;font-weight:800}
 
 /* Würfel */
-.dice{display:flex;gap:8px;justify-content:center}
-.die{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;
-  justify-content:center;font-size:24px;font-weight:800;color:#26241f;
-  border:3px solid transparent}
+.dice{display:flex;gap:clamp(5px,1.8vw,8px);justify-content:center;flex-wrap:wrap}
+.die{width:clamp(42px,13vw,54px);height:clamp(42px,13vw,54px);border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:clamp(18px,5.5vw,24px);font-weight:800;color:#26241f;
+  border:3px solid transparent;flex:0 0 auto}
 .die.n{background:var(--ink)}
 .die.J{background:#26241f;color:var(--ink);box-shadow:inset 0 0 0 3px var(--ink)}
 .die.pick{border-color:var(--ink);transform:translateY(-4px)}
@@ -123,19 +128,20 @@ label.small{font-size:14px;color:var(--ink-dim);display:block;margin-bottom:6px}
 .cup{padding:22px 14px;text-align:center;cursor:pointer}
 @media (prefers-reduced-motion:reduce){.die.shake,.die.land{animation:none}}
 .dicerow{display:flex;flex-direction:column;gap:10px;align-items:center}
-.small-die{width:40px;height:40px;font-size:18px;border-radius:11px}
+.small-die{width:clamp(33px,9.5vw,40px);height:clamp(33px,9.5vw,40px);
+  font-size:clamp(15px,4.4vw,18px);border-radius:11px}
 
 .overlay{position:fixed;inset:0;background:#12110ecc;display:flex;align-items:center;
   justify-content:center;padding:18px;z-index:50}
 .overlay .box{background:var(--paper);border-radius:18px;padding:20px;max-width:380px;width:100%}
 .overlay p{margin:0 0 16px;font-size:18px;font-weight:700;line-height:1.35;text-align:center}
-.step{font-size:17px;font-weight:700;text-align:center;margin:12px 0 10px;line-height:1.35}
+.step{font-size:clamp(15px,4.5vw,17px);font-weight:700;text-align:center;margin:12px 0 10px;line-height:1.35}
 .step .muted{display:block;font-size:14px;font-weight:500;color:var(--ink-dim);margin-top:3px}
 .err{color:#ffb3b3;text-align:center;font-size:15px;min-height:22px;margin:6px 0 0}
-.who{font-size:26px;font-weight:800;text-align:center;margin:6px 0 2px}
+.who{font-size:clamp(21px,6.5vw,26px);font-weight:800;text-align:center;margin:6px 0 2px}
 .mini{font-size:14px;color:var(--ink-dim);text-align:center}
-table{width:100%;border-collapse:collapse;font-size:15px}
-td,th{padding:7px 4px;text-align:right;border-bottom:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:clamp(12px,3.4vw,15px)}
+td,th{padding:6px 3px;text-align:right;border-bottom:1px solid var(--line)}
 th:first-child,td:first-child{text-align:left}
 ul.probs{margin:8px 0 0;padding-left:18px;line-height:1.6;color:var(--ink-dim)}
 </style>
@@ -356,7 +362,11 @@ function startGame(cfg){
     players,
     nDice: cfg.mode==="solo" ? cfg.soloDice/2 : 3,
     maxRounds: cfg.mode==="solo" ? 30 : Infinity,
-    round: 1, activeIdx: 0, dice:null, removed:[], queue:[], qi:0,
+    round: 1,
+    activeIdx: (cfg.mode==="pass"||cfg.mode==="bot") ? Math.min(cfg.starter||0, players.length-1) : 0,
+    total: cfg.mode==="sheet" ? (cfg.total||1) : players.length,
+    pos: cfg.mode==="sheet" ? (cfg.pos||1) : 1,
+    dice:null, removed:[], queue:[], qi:0,
     entry:null, sel:null, colTopTaken:Array(COLS).fill(false), bonusTopTaken:{},
     log:[], over:false, phase:"entry"
   };
@@ -544,7 +554,7 @@ function evalMove(p, cells, num, jk){
    4. OBERFLÄCHE
    ========================================================== */
 let errMsg = "", screen = "home", editMode = "color", showHelp = true;
-let cfg = { mode:"pass", diceMode:"app", soloDice:4, count:2,
+let cfg = { mode:"pass", diceMode:"app", soloDice:4, count:2, starter:0, total:2, pos:1,
             names:["Loris","Mama","Spieler 3","Spieler 4"] };
 const el = document.getElementById("app");
 const setErr = m => { errMsg = m; render(); };
@@ -595,8 +605,11 @@ function renderRoll(){
     return base + (S.rolling ? (settled ? " land" : " shake") : "");
   };
   let h = `<div class="who" style="margin-top:26px">${esc(p.name)} würfelt</div>
-    <p class="mini" style="margin-bottom:16px">Runde ${S.round}${S.mode==="solo"?" von 30":""}
-      · ${N} Farb- und ${N} Zahlenwürfel</p>
+    <p class="mini">Runde ${S.round}${S.mode==="solo"?" von 30":""} · ${N} Farb- und ${N} Zahlenwürfel</p>
+    ${S.mode==="sheet" && S.total>1
+      ? `<p class="mini" style="color:var(--Y);margin-bottom:16px">${
+          aktivePos()===S.pos ? "Du bist dran" : "Nummer "+aktivePos()+" ist dran"}</p>`
+      : `<p class="mini" style="margin-bottom:16px">&nbsp;</p>`}
     <div class="card cup" onclick="doRoll()"><div class="dicerow"><div class="dice">`;
   for(let i=0;i<N;i++)
     h += `<div class="die ${cls("c",i)}">${
@@ -639,7 +652,17 @@ function renderHome(){
       </div>
       <p class="mini" style="text-align:left;margin:0 0 12px">${cfg.diceMode==="app"
         ? "Dein Handy würfelt die 6 Würfel gross und sichtbar – die anderen schauen mit und tippen auf ihrem Gerät nur ihre Kombination an."
-        : "Es wird mit echten Würfeln oder auf einem anderen Handy gewürfelt. Du tippst an, welche Farbe und Zahl du nimmst."}</p>` : ""}
+        : "Es wird mit echten Würfeln oder auf einem anderen Handy gewürfelt. Du tippst an, welche Farbe und Zahl du nimmst."}</p>
+      <label class="small">Wie viele spielen mit?</label>
+      <div class="tabs" style="margin-bottom:12px">
+        ${[2,3,4].map(k => `<button class="${cfg.total===k?"on":""}" onclick="setCfg('total',${k})">${k}</button>`).join("")}
+      </div>
+      <label class="small">Du bist die Nummer</label>
+      <div class="tabs" style="margin-bottom:12px">
+        ${Array.from({length:cfg.total}, (_,i) =>
+          `<button class="${cfg.pos===i+1?"on":""}" onclick="setCfg('pos',${i+1})">${i+1}</button>`).join("")}
+      </div>
+      <p class="mini" style="text-align:left;margin:0 0 12px">Nummer 1 beginnt, dann reihum. Einigt euch vorher, wer welche Nummer hat – dann sagt euch jedes Handy, wer gerade dran ist.</p>` : ""}
     ${cfg.mode==="pass" ? `
       <label class="small">Wie viele?</label>
       <div class="tabs" style="margin-bottom:12px">
@@ -679,6 +702,14 @@ function renderHome(){
       }
       return out;
     })()}
+    ${cfg.mode==="pass"||cfg.mode==="bot" ? `
+      <label class="small">Wer beginnt?</label>
+      <div class="tabs" style="margin-bottom:12px">
+        ${Array.from({length: cfg.mode==="bot" ? 2 : cfg.count}, (_,i) =>
+          `<button class="${cfg.starter===i?"on":""}" onclick="setCfg('starter',${i})">${
+            esc(cfg.names[i] || ("Spieler "+(i+1)))}</button>`).join("")}
+      </div>
+      <p class="mini" style="text-align:left;margin:0 0 12px">Danach wird reihum weitergewürfelt: in jeder Runde ist der Nächste dran.</p>` : ""}
     <button class="go" style="width:100%;font-size:19px" onclick="begin()">Losspielen</button>
   </div>
 
@@ -691,7 +722,12 @@ function renderHome(){
   </div>
   <button class="quiet" style="width:100%" onclick="go('editor')">Spielblatt bearbeiten</button>`;
 }
-function setCfg(k,v){ cfg[k] = v; render(); }
+function setCfg(k,v){
+  cfg[k] = v;
+  if(cfg.starter >= cfg.count) cfg.starter = 0;      // weniger Spieler als vorher
+  if(cfg.pos > cfg.total) cfg.pos = 1;
+  render();
+}
 function toggleHelp(){ showHelp = !showHelp; render(); }
 function go(s){ screen = s; render(); }
 function begin(){
@@ -703,7 +739,7 @@ function begin(){
 function startNow(){
   screen = "game";
   startGame({ mode:cfg.mode, diceMode:cfg.diceMode,
-    soloDice: cfg.soloDice,
+    soloDice: cfg.soloDice, starter: cfg.starter, total: cfg.total, pos: cfg.pos,
     names: (cfg.mode==="solo"||cfg.mode==="sheet")
       ? [cfg.names[0]||"Du"]
       : cfg.names.slice(0, cfg.mode==="bot" ? 2 : cfg.count)
@@ -815,11 +851,28 @@ function renderHandoff(){
     <p class="mini">Runde ${S.round}</p>
     <div class="who" style="font-size:34px">${esc(p.name)}</div>
     <p class="mini" style="margin-bottom:26px">${isActiveTurn()
-      ? "ist dran und darf zuerst wählen" : "wählt aus den übrigen Würfeln"}</p>
+      ? "ist dran und nimmt zuerst zwei Würfel"
+      : "wählt aus den vier übrigen Würfeln"}</p>
     <button class="go" style="width:100%;font-size:20px;padding:18px" onclick="startTurn()">Weiter</button>
     <button class="quiet" style="width:100%;margin-top:8px" onclick="quit()">Spiel beenden</button></div>`;
 }
 function startTurn(){ S.phase = "choose"; render(); }
+
+/* Wer ist gerade an der Reihe? Im Zettel-Modus rechnet die App das aus der
+   Wurfnummer aus: Nummer 1 beginnt, dann reihum. */
+function aktivePos(){ return ((S.round - 1) % S.total) + 1; }
+function dranText(){
+  if(S.mode === "sheet"){
+    if(S.total < 2) return "";
+    return aktivePos() === S.pos
+      ? "Du bist dran – du nimmst zuerst zwei Würfel"
+      : "Nummer " + aktivePos() + " ist dran – du wählst aus den vier übrigen";
+  }
+  if(S.mode === "solo") return "";
+  return isActiveTurn()
+    ? "Du bist dran – du nimmst zuerst zwei Würfel"
+    : esc(S.players[S.queue[0]].name) + " hat zwei Würfel genommen";
+}
 
 /* --- Spielzug --- */
 function renderGame(){
@@ -844,7 +897,8 @@ function renderGame(){
   let h = `<div class="row" style="margin:10px 0 0">
       <div class="grow"><b style="font-size:20px">${esc(p.name)}</b>
         <div class="mini" style="text-align:left">${eigenerZettel?"Wurf":"Runde"} ${S.round}${S.mode==="solo"?" von 30":""} ·
-          ${MAX_JOKER-p.jokersUsed} Ausrufezeichen übrig</div></div>
+          ${MAX_JOKER-p.jokersUsed} Ausrufezeichen übrig</div>
+        ${dranText() ? `<div class="mini" style="text-align:left;color:var(--Y)">${dranText()}</div>` : ""}</div>
       <button class="quiet" onclick="quit()">Ende</button></div>`;
 
   h += `<div class="card" style="margin-top:10px">`;
