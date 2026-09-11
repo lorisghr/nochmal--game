@@ -1,7 +1,7 @@
 /* Service Worker: legt die App beim ersten Besuch ab, danach läuft sie offline.
    Strategie: erst aus dem Cache antworten (sofort da, auch ohne Empfang),
    parallel im Hintergrund nach einer neueren Fassung schauen. */
-const CACHE = "nochmal-v1";     →     const CACHE = "nochmal-v2";
+const CACHE = "nochmal-v2";
 const FILES = [
   "./", "./index.html", "./manifest.webmanifest",
   "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"
