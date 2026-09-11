@@ -112,7 +112,14 @@ label.small{font-size:14px;color:var(--ink-dim);display:block;margin-bottom:6px}
 .die.n{background:var(--ink)}
 .die.J{background:#26241f;color:var(--ink);box-shadow:inset 0 0 0 3px var(--ink)}
 .die.pick{border-color:var(--ink);transform:translateY(-4px)}
-.die.gone{opacity:.18;pointer-events:none}
+.die.gone{opacity:.3;pointer-events:none;position:relative;filter:saturate(.4)}
+.die.gone::after{content:"";position:absolute;left:-4%;right:-4%;top:47%;height:3px;
+  background:var(--ink);border-radius:2px;transform:rotate(-32deg)}
+.taken{display:flex;align-items:center;gap:8px;background:#2b2823;border-radius:10px;
+  padding:6px 10px;margin-bottom:10px}
+.taken .mini{flex:1;margin:0}
+.mini-die{width:clamp(26px,7.5vw,32px);height:clamp(26px,7.5vw,32px);
+  border-radius:8px;font-size:clamp(13px,3.8vw,15px);border-width:2px}
 .die.empty{background:var(--paper-hi);border:2px dashed var(--line);color:var(--ink-dim);font-size:20px}
 .die.G{background:var(--G)} .die.Y{background:var(--Y)} .die.B{background:var(--B)}
 .die.R{background:var(--R)} .die.O{background:var(--O)}
@@ -366,7 +373,7 @@ function startGame(cfg){
     activeIdx: (cfg.mode==="pass"||cfg.mode==="bot") ? Math.min(cfg.starter||0, players.length-1) : 0,
     total: cfg.mode==="sheet" ? (cfg.total||1) : players.length,
     pos: cfg.mode==="sheet" ? (cfg.pos||1) : 1,
-    dice:null, removed:[], queue:[], qi:0,
+    dice:null, taken:null, queue:[], qi:0,
     entry:null, sel:null, colTopTaken:Array(COLS).fill(false), bonusTopTaken:{},
     log:[], over:false, phase:"entry"
   };
@@ -376,7 +383,7 @@ function clearSel(){ S.sel = { c:null, n:null, jc:null, jn:null, cells:[] }; }
 
 function beginRound(){
   clearSel(); errMsg = "";
-  S.removed = [];
+  S.taken = null;
   S.queue = S.players.map((_,i) => (S.activeIdx + i) % S.players.length);
   S.qi = 0;
   if(S.diceMode === "sheet"){
@@ -385,7 +392,7 @@ function beginRound(){
     S.entry = { c:Array(S.nDice).fill(null), n:Array(S.nDice).fill(null), slot:{t:"c",i:0} };
     S.phase = "entry"; render();
   } else {
-    S.dice = null; S.rolling = false; S.settled = null;
+    S.dice = null; S.rolling = false; S.settled = null; S.taken = null;
     S.phase = "roll"; render();
     if(S.players[S.activeIdx].isBot) setTimeout(doRoll, 700);
   }
@@ -394,6 +401,7 @@ function beginRound(){
 /* Digitale Würfel: antippen, sie rollen und bleiben nacheinander liegen. */
 function doRoll(){
   if(S.rolling || S.dice) return;
+  playRoll();
   const N = S.nDice;
   const final = { c:Array.from({length:N}, () => rand(COLOR_FACES)),
                   n:Array.from({length:N}, () => rand(NUM_FACES)) };
@@ -416,7 +424,7 @@ function doRoll(){
     }
     if(step >= 5 && (step-5) % 2 === 0){
       const o = order[(step-5)/2];
-      if(o){ S.settled[o.t][o.i] = true; S.dice[o.t][o.i] = final[o.t][o.i]; }
+      if(o){ S.settled[o.t][o.i] = true; S.dice[o.t][o.i] = final[o.t][o.i]; playTick(); }
     }
     render();
     if(S.settled.c.every(Boolean) && S.settled.n.every(Boolean)){
@@ -446,8 +454,9 @@ const isActiveTurn = () => S.qi === 0;
 function availableDice(){
   const all = { c:S.dice.c.map((v,i)=>({v,i,gone:false})),
                 n:S.dice.n.map((v,i)=>({v,i,gone:false})) };
-  if(S.round <= 3 || isActiveTurn() || S.removed.length === 0) return all;
-  for(const d of S.removed){ if(d.t==="c") all.c[d.i].gone = true; else all.n[d.i].gone = true; }
+  if(S.round <= 3 || isActiveTurn() || !S.taken) return all;
+  all.c[S.taken.c].gone = true;
+  all.n[S.taken.n].gone = true;
   return all;
 }
 function faceC(){ return S.diceMode==="sheet" ? S.sel.fc : (S.sel.c===null ? null : S.dice.c[S.sel.c]); }
@@ -467,14 +476,15 @@ function confirmMove(){
   if(p.jokersUsed + need > MAX_JOKER) return setErr("Nicht mehr genug Ausrufezeichen.");
   const err = validate(p, color, num, S.sel.cells);
   if(err) return setErr(err);
+  playCross(S.sel.cells.length);
   S.sel.cells.forEach(k => p.crossed.add(k));
   p.jokersUsed += need;
-  if(S.diceMode !== "sheet" && isActiveTurn() && S.round > 3)
-    S.removed = [{t:"c",i:S.sel.c},{t:"n",i:S.sel.n}];
+  if(S.diceMode !== "sheet" && isActiveTurn())
+    S.taken = { c:S.sel.c, n:S.sel.n, wer:p.name };
   S.qi++; toTurn();
 }
 function passMove(){
-  if(S.diceMode !== "sheet" && isActiveTurn() && S.round > 3) S.removed = [];
+  if(S.diceMode !== "sheet" && isActiveTurn()) S.taken = null;
   S.qi++; toTurn();
 }
 function endRound(){
@@ -562,6 +572,67 @@ const esc = s => String(s).replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">"
 
 /* Eigene Rückfrage statt confirm(): native Dialoge werden in eingebetteten
    Ansichten blockiert, und dann passiert beim Tippen scheinbar gar nichts. */
+let audioCtx = null, noiseBuf = null;
+let soundOn = (() => { try{ return localStorage.getItem("nochmal.sound") !== "0"; }catch(e){ return true; } })();
+function toggleSound(){
+  soundOn = !soundOn;
+  try{ localStorage.setItem("nochmal.sound", soundOn ? "1" : "0"); }catch(e){}
+  if(soundOn) playTick();
+  render();
+}
+function ac(){
+  if(!soundOn) return null;
+  const C = typeof AudioContext !== "undefined" ? AudioContext
+          : (typeof webkitAudioContext !== "undefined" ? webkitAudioContext : null);
+  if(!C) return null;                       // Browser ohne Web Audio: einfach still
+  if(!audioCtx) audioCtx = new C();
+  if(audioCtx.state === "suspended") audioCtx.resume();   // iOS braucht eine Nutzeraktion
+  return audioCtx;
+}
+function rauschen(ctx){
+  if(noiseBuf && noiseBuf.sampleRate === ctx.sampleRate) return noiseBuf;
+  const n = Math.floor(ctx.sampleRate * 0.6);
+  const b = ctx.createBuffer(1, n, ctx.sampleRate);
+  const d = b.getChannelData(0);
+  for(let i=0;i<n;i++) d[i] = Math.random()*2 - 1;
+  noiseBuf = b; return b;
+}
+/* Ein kurzer gefilterter Rauschstoss – je nach Frequenz und Länge klingt das
+   wie Würfel auf Holz oder wie ein Bleistiftstrich auf Papier. */
+function stoss(ctx, wann, dauer, freq, q, laut, sweep){
+  const src = ctx.createBufferSource();
+  src.buffer = rauschen(ctx);
+  src.playbackRate.value = 0.85 + Math.random()*0.3;
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass"; bp.Q.value = q;
+  bp.frequency.setValueAtTime(freq, wann);
+  if(sweep) bp.frequency.exponentialRampToValueAtTime(freq*sweep, wann+dauer);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, wann);
+  g.gain.linearRampToValueAtTime(laut, wann + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, wann + dauer);
+  src.connect(bp); bp.connect(g); g.connect(ctx.destination);
+  src.start(wann); src.stop(wann + dauer + 0.03);
+}
+function playRoll(){
+  const ctx = ac(); if(!ctx) return;
+  let t = ctx.currentTime;
+  for(let i=0;i<12;i++){                     // Würfel poltern, werden langsamer
+    stoss(ctx, t, 0.05 + Math.random()*0.03, 800 + Math.random()*1500, 3, 0.20, 0.55);
+    t += 0.04 + i*0.012 + Math.random()*0.02;
+  }
+}
+function playTick(){
+  const ctx = ac(); if(!ctx) return;
+  stoss(ctx, ctx.currentTime, 0.06, 1400 + Math.random()*900, 4, 0.22, 0.5);
+}
+function playCross(n){
+  const ctx = ac(); if(!ctx) return;
+  const t0 = ctx.currentTime;
+  for(let i=0;i<Math.max(1,n);i++)           // ein Strich je Kästchen
+    stoss(ctx, t0 + i*0.08, 0.11, 2400 + Math.random()*700, 1.2, 0.13, 0.42);
+}
+
 let ask = null;
 function askConfirm(text, yesLabel, cb){ ask = { text, yesLabel, cb }; render(); }
 function askYes(){ const cb = ask.cb; ask = null; cb(); render(); }
@@ -719,6 +790,11 @@ function renderHome(){
       <button onclick="toggleHelp()">${showHelp ? "An" : "Aus"}</button>
     </div>
     <p class="mini" style="text-align:left;margin:8px 0 0">Blendet die Kästchen aus, die gerade nicht erlaubt sind.</p>
+    <div class="row" style="justify-content:space-between;margin-top:14px">
+      <span>Töne</span>
+      <button onclick="toggleSound()">${soundOn ? "An" : "Aus"}</button>
+    </div>
+    <p class="mini" style="text-align:left;margin:8px 0 0">Würfelgepolter beim Werfen, Bleistiftstriche beim Ankreuzen.</p>
   </div>
   <button class="quiet" style="width:100%" onclick="go('editor')">Spielblatt bearbeiten</button>`;
 }
@@ -914,6 +990,16 @@ function renderGame(){
     h += `<div class="die small-die n ${S.sel.fn==="?"?"pick":""}" onclick="setFN('?')">?</div>`;
     h += `</div></div>`;
   } else {
+    if(!isActiveTurn() && S.taken){
+      const tc = S.dice.c[S.taken.c], tn = S.dice.n[S.taken.n];
+      h += `<div class="taken">
+        <span class="mini" style="text-align:left">${esc(S.taken.wer)} hat genommen</span>
+        <span class="die mini-die ${tc==="J"?"J":tc}">${tc==="J"?"&#10006;":""}</span>
+        <span class="die mini-die n">${tn}</span>
+      </div>`;
+      if(S.round <= 3)
+        h += `<p class="mini" style="margin:0 0 8px">In den ersten 3 Runden darfst du trotzdem aus allen sechs wählen.</p>`;
+    }
     h += `<div class="dicerow"><div class="dice">`;
     av.c.forEach(d => h += `<div class="die ${d.v==="J"?"J":d.v} ${d.gone?"gone":""}
         ${S.sel.c===d.i?"pick":""}" onclick="pickC(${d.i})">${d.v==="J"?"&#10006;":""}</div>`);
